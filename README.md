@@ -76,3 +76,114 @@ CREATE TABLE books (
     description TEXT,
     ...
 );
+```
+
+---
+
+### 4. **REST API** (`API/`)
+
+#### Script: `main.py`
+
+A robust FastAPI server providing access to the library catalog.
+
+**Technology Stack:**
+
+* Framework: FastAPI
+* Server: Uvicorn
+* Database: SQLite3
+* **New Feature:** Dependency Injection for database connections.
+
+**Endpoints:**
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/` | Health check to verify API status |
+| GET | `/books` | Fetch books with pagination (`limit`, `offset`) |
+| GET | `/search` | **Search books by Title or Author** (SQL LIKE) |
+| GET | `/books/{isbn}` | Fetch a single book by ISBN (auto-cleans dashes) |
+| POST | `/sync` | **ETL Trigger:** Wipes DB and reloads fresh data from CSV |
+
+---
+
+## Full Data Pipeline Flow
+```mermaid
+graph TD
+    A[dau_library_data.csv (36k)] -->|Cleaning| B(fetch_description.py)
+    B -->|Scrape| C{OpenLibrary (3.5k found)}
+    B -->|Scrape| D{Google Books}
+    B -->|API| E{Wikipedia Rescue}
+    C & D & E --> F[dau_with_description.csv (30.4k Enriched)]
+    F -->|POST /sync| G[SQLite Database]
+    G -->|Query| H[FastAPI Server]
+    H -->|JSON| I[User Client]
+```
+
+---
+
+## File Structure
+```
+Big-Data-Engineering-/
+├── API/
+│   ├── main.py               # Main FastAPI Application (formerly book_api.py)
+│   └── __pycache__/
+├── Data/
+│   ├── raw_data/             # Original CSV files
+│   └── processed/            # Enriched data
+│       └── dau_with_description.csv
+├── Data-Building/
+│   ├── fetch_description.py  # Primary scraping script
+│   └── wiki_rescue.py        # Wikipedia fallback script
+├── Database/
+│   ├── db.sqlite3            # SQLite database file
+│   └── SQLite3.py            # Manual loader script
+├── logs/
+│   └── prompt.md
+├── requirements.txt          # Python dependencies
+└── README.md
+```
+
+---
+
+## Dependencies
+```txt
+requests          # HTTP requests
+beautifulsoup4    # HTML parsing
+fastapi           # REST API framework
+pandas            # Data processing
+uvicorn           # Server
+wikipedia         # Wikipedia API wrapper
+```
+
+Install: `pip install -r requirements.txt`
+
+---
+
+## How to Run
+
+### Step 1: Fetch Book Descriptions
+```bash
+cd Data-Building/
+python fetch_description.py
+# (Optional) Run wikipedia rescue if needed
+```
+
+### Step 2: Start API Server
+```bash
+cd API/
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# API available at: http://localhost:8000
+```
+
+### Step 3: Initialize Database (Via API)
+
+Instead of running a manual script, you can now trigger the load via the API:
+```bash
+curl -X POST http://localhost:8000/sync
+# Output: {"status": "success", "message": "Synced 30400 books."}
+```
+
+### Step 4: Search for Books
+```bash
+# Search by Title
+curl "http://localhost:8000/search?q=Harry+Potter"
+```
