@@ -1,114 +1,71 @@
-# 📚 Book Description Enrichment Pipeline
-### Big Data Engineering Mini Project
+# Big Data Engineering Project Workflow
 
-A comprehensive data engineering pipeline to enrich library book records with missing descriptions using multiple public data sources, followed by structured storage in SQLite and API-based access via FastAPI.
-
----
-
-## 📑 Table of Contents
-- [Overview](#-overview)
-- [Problem Statement](#-problem-statement)
-- [Data Sources](#-data-sources)
-- [Dataset Evolution](#-dataset-evolution)
-- [Final Data Schema](#-final-data-schema)
-- [Database Design](#-database-design)
-- [API Endpoints](#-api-endpoints-fastapi)
-- [Technologies Used](#-technologies-used)
+## Project Overview
+This project is a **Book Library Data Pipeline** that fetches book descriptions from multiple sources (OpenLibrary, Google Books, Wikipedia), stores them in a SQLite database, and exposes the data through a professional FastAPI REST API.
 
 ---
 
-## 📌 Overview
-This project implements an **end-to-end data enrichment pipeline** that:
-- Starts from a raw library dataset with **no book descriptions**.
-- Collects missing descriptions from **multiple external sources**.
-- Applies **multi-stage fallback logic** to maximize coverage.
-- Cleans and merges data into a **final unified dataset**.
-- Stores enriched data in **SQLite**.
-- Serves data using **FastAPI REST endpoints**.
+## Architecture & Workflow
 
-This project reflects **real-world data engineering challenges**, especially for **Indian publications**, where book descriptions are often unavailable from a single source.
+### 1. **Data Collection & Enrichment** (`Data-Building/`)
 
----
+#### Input
+- **Source**: `dau_library_data.csv` - Raw library data with book metadata
+  - Columns: Acc_Date, Acc_No, Title, ISBN, Author_Editor, Edition_Volume, Place_Publisher, Year, Pages, Class_No
 
-## ❓ Problem Statement
-The original dataset (`dau_library.csv`) did not contain a book description column. Additionally:
-- **OpenLibrary** provides limited coverage for Indian books.
-- **ISBN-based lookups** frequently fail for older or local editions.
-- A **single data source** was insufficient to achieve high coverage.
+#### Processing: `fetch_description.py` & `rescue_script.py`
+The pipeline enriches raw data by fetching descriptions using a **multi-stage fallback strategy**.
 
-**Solution:** A **multi-source enrichment and fallback strategy** was designed to iteratively fill gaps.
+**Steps:**
+1. **Load & Clean Data**
+   - Read CSV file (encoding: latin1)
+   - Remove duplicate records based on Title, ISBN, and Author.
+   - Initialize description column with "Not Found".
 
----
+2. **Fetch from OpenLibrary** (First Priority)
+   - Query: `https://openlibrary.org/isbn/{ISBN}`
+   - Extract description via HTML scraping.
+   - Rate limit: 1 second delay per request.
 
-## 🧩 Data Sources
-1.  **Local Library Dataset (CSV)**: The raw metadata.
-2.  **OpenLibrary API**: Used for initial ISBN-based lookups.
-3.  **Google Books**:
-    - **HTML Scraping**: Extracted descriptions directly from web pages.
-    - **API Fallback**: Used for fuzzy searching.
-    - **Title + Author Search**: Used when ISBNs failed.
+3. **Fetch from Google Books** (Second Priority - Scraper)
+   - For missing descriptions, query: `https://books.google.com/books?vid=ISBN{ISBN}`
+   - Scrape synopsis from `<div id="synopsis">`.
 
----
+4. **Fetch from Google Books API** (Third Priority - Fuzzy Search)
+   - If ISBN fails, search by **Title + Author** using the Google Books API.
+   - Handles invalid ISBNs effectively.
 
-## 🗂 Dataset Evolution
+5. **Fetch from Wikipedia** (Final Rescue - API)
+   - **New Feature:** For stubborn records, utilize the `wikipedia` Python library.
+   - Search query: `"{Title} (novel)"` to find book summaries.
+   - Fills remaining gaps to ensure maximum data coverage.
 
-### 1️⃣ Base Dataset (No Descriptions)
-**File:** `dau_library.csv`
-- **Contains:** Accession Date, Acc No, Title, ISBN, Author/Editor, Publisher, Year, Pages, Class No.
-- **Status:** ❌ No description column.
-
-### 2️⃣ ISBN-Based Description Fetch (OpenLibrary)
-**File:** `OpenLibrary_5000.csv`
-- **Action:** Selected the first **5,000 records** and queried the OpenLibrary API.
-- **Result:** Partial success; many returned `"Not Found"`.
-
-### 3️⃣ Google Books HTML Scraping (Large Scale)
-**File:** `HTML_tag_through_All_36000.csv`
-- **Action:** Scraped ~36,000 book pages on Google Books using ISBNs.
-- **Technique:** Parsed HTML tags to extract the synopsis.
-- **Result:** Higher coverage than OpenLibrary, but gaps remained.
-
-### 4️⃣ First Merge (Google Books + OpenLibrary)
-**File:** `Final_Merged_Descriptions.csv`
-- **Logic:**
-    - **Primary Source:** Google Books.
-    - **Fallback Source:** OpenLibrary.
-    - *If Google Books description is missing, fill using OpenLibrary.*
-- **Result:** Significant reduction in missing descriptions.
-
-### 5️⃣ Title + Author Based Fetch (Final Fallback)
-**File:** `Final_GoogleBooks_Descriptions.csv`
-- **Action:** Filtered remaining `"Not Found"` rows.
-- **Technique:** Performed a **Title + Author** search (fuzzy matching) instead of strict ISBN matching.
-- **Cleaning:** Text was lowercased and punctuation removed for better matching.
-- **Result:** Recovered descriptions for books with bad/missing ISBNs.
-
-### 6️⃣ Final Clean Dataset
-**File:** `dau_with_description.csv`
-- **Action:** Merged the results from Step 4 and Step 5.
-- **Status:** ✅ Ready for SQLite database insertion.
+#### Output
+- **File**: `Data/processed/dau_with_description.csv`
+- Contains all original columns + new `description` column.
 
 ---
 
-## 🧾 Final Data Schema
+### 2. **Data Statistics (Enrichment Results)**
 
-| Column Name | Description |
-| :--- | :--- |
-| `acc_no` | Unique Accession number (Primary Key) |
-| `title` | Book title |
-| `isbn` | ISBN number |
-| `author_editor` | Author / Editor name |
-| `publisher` | Publisher details |
-| `year` | Publication year |
-| `pages` | Number of pages |
-| `class_no` | Classification number |
-| `description` | **Enriched book description** (The target feature) |
+Our multi-stage pipeline achieved significant data enrichment coverage.
+
+| Stage | Action | Result |
+| :--- | :--- | :--- |
+| **1. Input** | Initial Raw Data | **36,000** Total Rows |
+| **2. OpenLibrary** | Attempted on first 5,000 rows | Found **~3,500** descriptions |
+| **3. Google Books** | Merged OpenLibrary + Google Books results | **9,000** rows still "Not Found" (25% gap) |
+| **4. Wikipedia** | Applied Rescue Script on "Not Found" rows | Recovered thousands of missing descriptions |
+| **5. Final Output** | **Final Enriched Dataset** | **30,400** Books with Descriptions (84% Coverage) |
 
 ---
 
-## 🗄 Database Design
-**Database:** `library.db` (SQLite)
+### 3. **Database Setup** (`Database/`)
 
+#### Script: `SQLite3.py` (Manual) or `/sync` Endpoint (Automated)
+Loads the enriched CSV data into SQLite3 database.
+
+**Schema:**
 ```sql
 CREATE TABLE books (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -116,9 +73,6 @@ CREATE TABLE books (
     title TEXT,
     isbn TEXT,
     author_editor TEXT,
-    publisher TEXT,
-    year INTEGER,
-    pages INTEGER,
-    class_no TEXT,
-    description TEXT
+    description TEXT,
+    ...
 );
