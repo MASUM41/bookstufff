@@ -108,14 +108,17 @@ A robust FastAPI server providing access to the library catalog.
 ## Full Data Pipeline Flow
 ```mermaid
 graph TD
-    A[dau_library_data.csv (36k)] -->|Cleaning| B(fetch_description.py)
-    B -->|Scrape| C{OpenLibrary (3.5k found)}
+    A[dau_library_data.csv 36k] -->|Cleaning| B[fetch_description.py]
+    B -->|Scrape| C{OpenLibrary 3.5k found}
     B -->|Scrape| D{Google Books}
     B -->|API| E{Wikipedia Rescue}
-    C & D & E --> F[dau_with_description.csv (30.4k Enriched)]
+    C --> F[dau_with_description.csv 30.4k Enriched]
+    D --> F
+    E --> F
     F -->|POST /sync| G[SQLite Database]
     G -->|Query| H[FastAPI Server]
     H -->|JSON| I[User Client]
+```
 ```
 
 ---
