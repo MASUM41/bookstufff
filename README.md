@@ -119,8 +119,6 @@ graph TD
     G -->|Query| H[FastAPI Server]
     H -->|JSON| I[User Client]
 ```
-```
-
 ---
 
 ## File Structure
