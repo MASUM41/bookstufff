@@ -7,7 +7,7 @@ This project is a **Book Library Data Pipeline** that fetches book descriptions 
 
 ## Architecture & Workflow
 
-### 1. **Data Collection & Enrichment** (`Data-Building/`)
+### 1. **Data Collection & Enrichment** 
 
 #### Input
 - **Source**: `dau_library_data.csv` - Raw library data with book metadata
