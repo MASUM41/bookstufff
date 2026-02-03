@@ -13,7 +13,7 @@ This project is a **Book Library Data Pipeline** that fetches book descriptions 
 - **Source**: `dau_library_data.csv` - Raw library data with book metadata
   - Columns: Acc_Date, Acc_No, Title, ISBN, Author_Editor, Edition_Volume, Place_Publisher, Year, Pages, Class_No
 
-#### Processing: `fetch_description.py` & `rescue_script.py`
+#### Processing: 
 The pipeline enriches raw data by fetching descriptions using a **multi-stage fallback strategy**.
 
 **Steps:**
