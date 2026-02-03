@@ -123,24 +123,28 @@ graph TD
 
 ## File Structure
 ```
-Big-Data-Engineering-/
-├── API/
-│   ├── main.py               # Main FastAPI Application (formerly book_api.py)
-│   └── __pycache__/
-├── Data/
-│   ├── raw_data/             # Original CSV files
-│   └── processed/            # Enriched data
-│       └── dau_with_description.csv
-├── Data-Building/
-│   ├── fetch_description.py  # Primary scraping script
-│   └── wiki_rescue.py        # Wikipedia fallback script
-├── Database/
-│   ├── db.sqlite3            # SQLite database file
-│   └── SQLite3.py            # Manual loader script
-├── logs/
-│   └── prompt.md
-├── requirements.txt          # Python dependencies
-└── README.md
+## Repository Structure
+
+```text
+BIG_DATA_PROJECT/
+├── data/
+│   ├── processed/
+│   │   └── Final_Merged_Dataset.csv
+│   └── raw/
+│       └── dau_library_data.csv
+├── notebooks/
+│   └── fetch_description.ipynb
+├── scripts/
+│   ├── csv_to_sqlite.py
+│   ├── main.py
+│   ├── merge_csv.py
+│   └── wekipedia_filler.py
+├── .gitignore
+├── README.md
+├── book.py
+├── checkapi.py
+├── db.sqlite3
+└── requirements.txt
 ```
 
 ---
